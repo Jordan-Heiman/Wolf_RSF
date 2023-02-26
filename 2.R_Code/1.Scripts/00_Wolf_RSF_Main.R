@@ -37,6 +37,18 @@ cov_cont_rast_lst <- list.files(here("1.Data"),
                            pattern = "*.tif$",
                            full.names = TRUE)
 cov_cat_rast_lst <- here("1.Data", "landcover")
+
+# This table could be change if different categories need to be merged, etc. Just 
+# needs to be a data.frame with the id in one column and the name of the habitat 
+# type or group it belongs to
+landcov_cats <- data.frame(id = 0:16, 
+                           habitat_type = c(NA, "Open Conifer", "Moderate Conifer", 
+                                            "Closed Conifer", "Deciduous", 
+                                            "Mixed Forest", "Regeneration", 
+                                            "Herbaceous", "Shrub", "Water",
+                                            "Rock-Ice","Cloud", "Burn-Forest", 
+                                            "Burn-Grassland", "Burn-Shrub", 
+                                            "Alpine Herb", "Alpine Shrub"))
 wolf_shp <- here("1.Data", "wolfyht.shp")
   
 ################################################################################
@@ -46,6 +58,7 @@ cov_rasters <- prep_sp_cov(cov_shp = cov_shp_lst,
                            cov_cat_rast = cov_cat_rast_lst,
                            cov_cont_rast_names = c("high_hum", "hum_acc", "elev"),
                            cov_cat_rast_names = c("landcov"),
+                           cat_att_tbl = lst(landcov = landcov_cats),
                            sa_ext = c(xmin = 443680.6, 
                                       xmax = 650430.4, 
                                       ymin = 5618416, 
@@ -59,6 +72,13 @@ all_pts <- home_range_pts(ani_shp = wolf_shp,
                           coord_col = c("EASTING", "NORTHING"),
                           pref_crs = "+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0")
 
+
+
+
+
+
+
+
 #   Lab 2.4 - Extract raster values for available points                    ####
 all_pts_covs <- lapply(all_pts, 
                        function(y) terra::extract(cov_rasters, 
@@ -67,3 +87,12 @@ all_pts_covs <- lapply(all_pts,
 
 #   Lab 3 - Univariate models                                               ####
 uni_mods <- glm_mods(pts_df_lst = all_pts_covs)
+
+
+
+
+
+# list of all the coefficients for all the covariates
+lapply(uni_mods, function(x) lapply(x, function(y) summary(y)$coefficients[, 1:2]))
+
+#   [Title]                                              ####

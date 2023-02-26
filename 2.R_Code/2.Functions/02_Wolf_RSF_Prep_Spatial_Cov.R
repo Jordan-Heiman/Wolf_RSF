@@ -37,6 +37,10 @@
 #       Names for the categorical rasters in order which will be used for the  
 #       names of the SpatRasters that are created
 
+# cat_att_tbl:
+#       List of data frame attribute tables, one for each categorical covariate 
+#       table that was provided in cov_cat_rast_names
+
 # sa_ext: 
 #       Study area extent for resampling rasters, must be using proper CRS and 
 #       in format: 
@@ -64,6 +68,7 @@ prep_sp_cov <- function(cov_shp,
                         cov_cat_rast,
                         cov_cont_rast_names,
                         cov_cat_rast_names,
+                        cat_att_tbl, 
                         sa_ext,
                         ras_res,
                         pref_crs){
@@ -138,6 +143,45 @@ prep_sp_cov <- function(cov_shp,
                    cov_sr_lst_resamp)
   
   # Rast() here stacks the rasters into one
-  return(rast(cov_rasters))
+  rast(cov_rasters)
+  
+  # Need to add categories for categorical raster if they are lost when it is 
+  # read in. First need to figure out which covariates were specified as 
+  # categorical
+  # Create a list of the indices of the categorical rasters
+  cat_indices <- which(names(cov_rasters) %in% cov_cat_rast_names)
+  
+  # Then make a list of the levels for all the rasters 
+  level_lst <- lapply(cov_rasters, levels)
+  
+  # For each raster in the covariate raster list that is categorical (based on 
+  # the index list made above)...
+  for (i in 1:length(cat_indices)){
+    
+    # Set aside what index number the raster is
+    index <- cat_indices[[i]]
+    
+    # Grab the name of the covariate that is used in the raster list
+    cov_name <- names(cov_rasters)[[index]]
+    
+    # Check that there are no levels set up for the covariate and that there is 
+    # an attribute table that was provided for the covariate
+    if (length(level_lst[index]) == 1 & cov_name %in% names(cat_att_tbl)){
+      
+      # Assign the attribute table as the levels of the covariate
+      levels(cov_rasters[[index]]) <- cat_att_tbl[which(cov_name %in% names(cat_att_tbl))]
+      
+    } else { 
+      
+      # Error out if there is not an attribute table for the covariate
+      stop(paste0("Missing an attribute table for the categorical covariates represented by the ", 
+                  cov_name, 
+                  " layer"))
+      }
+  }
+  
+  return(cov_rasters)
   
 }
+
+
