@@ -180,7 +180,7 @@ prep_sp_cov <- function(cov_shp,
       }
   }
   
-  return(cov_rasters)
+  return(rast(cov_rasters))
   
 }
 

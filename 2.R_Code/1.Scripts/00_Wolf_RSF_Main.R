@@ -86,6 +86,7 @@ all_pts_covs <- lapply(all_pts,
                                                   xy = TRUE))
 
 #   Lab 3 - Univariate models                                               ####
+#   NOTE: This is currently making models for both packs together           ####
 uni_mods <- glm_mods(pts_df_lst = all_pts_covs)
 
 
