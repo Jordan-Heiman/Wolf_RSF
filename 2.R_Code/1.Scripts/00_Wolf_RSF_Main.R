@@ -52,7 +52,7 @@ landcov_cats <- data.frame(id = 0:16,
 wolf_shp <- here("1.Data", "wolfyht.shp")
   
 ################################################################################
-#   Lab 2.1 - Prepare spatial covariate rasters                             ####
+#   Lab 2.1/4 - Prepare spatial covariate rasters                           ####
 cov_rasters <- prep_sp_cov(cov_shp = cov_shp_lst,
                            cov_cont_rast = cov_cont_rast_lst,
                            cov_cat_rast = cov_cat_rast_lst,
@@ -85,15 +85,15 @@ all_pts_covs <- lapply(all_pts,
                                                   st_as_sf(y),
                                                   xy = TRUE))
 
-#   Lab 3 - Univariate models                                               ####
-#   NOTE: This is currently making models for both packs together           ####
-uni_mods <- glm_mods(pts_df_lst = all_pts_covs)
+#   Lab 3/4 - Univariate models                                             ####
+#   NOTE: change by.group to create models by pack or groupings             ####
+uni_mods <- glm_mods(pts_df_lst = all_pts_covs, 
+                     by.group = TRUE)
 
 
 
 
 
-# list of all the coefficients for all the covariates
-lapply(uni_mods, function(x) lapply(x, function(y) summary(y)$coefficients[, 1:2]))
+# List of all the coefficients for all the covariates
+lapply(uni_mods, function(x) summary(x)$coefficients[, 1:2])
 
-#   [Title]                                              ####

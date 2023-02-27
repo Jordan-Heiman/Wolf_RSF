@@ -23,6 +23,11 @@
 #       used and available points for KDE and MCP home ranges as created by 
 #       previous functions
 
+# by.group
+#       A logical operator for whether the data and models should be separated by 
+#       grouping such as herds or packs similar to previous functions in this 
+#       series
+
 ################################# Output #######################################
 
 # mod_lst
@@ -32,7 +37,8 @@
 ################################################################################
 ## Function
 
-glm_mods <- function(pts_df_lst){
+glm_mods <- function(pts_df_lst,
+                     by.group = FALSE){
   
   # Based on the length of the points data.frame list, determine the number and 
   # names of the groups in the data (i.e. packs or herds). There are 3 types of 
@@ -45,7 +51,7 @@ glm_mods <- function(pts_df_lst){
   # This would probably all be easier to do when the data was first set up
   for (i in 1:length(pts_df_lst)){
     
-    # Check for type of points (avialable points from MCP, or KDE home ranges, 
+    # Check for type of points (available points from MCP, or KDE home ranges, 
     # or Used points)
     if (str_detect(names(pts_df_lst)[[i]], "mcp")){
       pts_df_lst[[i]] <- mutate(pts_df_lst[[i]], type = "mcp")
@@ -95,39 +101,52 @@ glm_mods <- function(pts_df_lst){
                          # Remove the unnecessary type column
                          ][, type := NULL]
   
-  # Put the data.tables back into a list so that each can be altered the same way
-  pt_sets <- list(kde = kde_pts,
-                  mcp = mcp_pts)
-  
-  # Create uni-variate models and add to a list
-  mod_lst_kde <- list()
-  mod_lst_mcp <- list()
-  names <- names(pt_sets$kde)[2:(length(names(pt_sets$kde))-5)]
-  
-  for(i in 1:length(names)){
+  # Depending on whether by.groups is false or true, set up models 
+  if (by.group == FALSE){
     
-    model <- glm(reformulate(names[i], "used"), 
-                  data = pt_sets$kde, 
-                  family = binomial(logit))
-    mod_lst_kde[[i]] <- model
-    names(mod_lst_kde)[[i]] <- names[[i]]
+    # Put the data.tables back into a list so that each can be altered the same way
+    pt_sets <- list(kde = kde_pts,
+                    mcp = mcp_pts)
     
+  } else if (by.group == TRUE){
+    
+    # Put the data.tables back into a list so that each can be altered the same way
+    grouped_pt_sets <- list(kde = kde_pts,
+                            mcp = mcp_pts) %>% 
+      lapply(function(x) split(x, f = x$group))
+    
+    pt_sets <- unlist(grouped_pt_sets, recursive = FALSE)
+    
+  } else {stop("by.group must be either TRUE or FALSE")}
+  
+  # Start with an empty list for KDE and MCP to populate with models
+  mod_lst <- list()
+  mod_counter <- 1
+  
+  for (i in 1:length(pt_sets)){
+    
+    data <- pt_sets[[i]]
+    data_name <- names(pt_sets)[[i]]
+    cov_lst <- names(data)[2:(length(names(data))-5)]
+    
+    # Create uni-variate models 
+    for(j in 1:length(cov_lst)){
+      
+      cov_name <- cov_lst[[j]]
+      model <- glm(reformulate(cov_name, "used"), 
+                   data = data, 
+                   family = binomial(logit))
+      mod_lst[[mod_counter]] <- model
+      names(mod_lst)[[mod_counter]] <- gsub(" |\\.|\\$", "_", data_name) %>% 
+        paste0("~", cov_name) %>% 
+        tolower()
+      
+      mod_counter <- mod_counter + 1
+      
+    }
   }
-  
-  for(i in 1:length(names)){
-    
-    model <- glm(reformulate(names[i], "used"), 
-                 data = pt_sets$mcp, 
-                 family = binomial(logit))
-    mod_lst_mcp[[i]] <- model
-    names(mod_lst_mcp)[[i]] <- names[[i]]
-    
-  }
-  
-  # Put lists together
-  mod_lst <- list(kde = mod_lst_kde,
-                  mcp = mod_lst_mcp)
   
   return(mod_lst)
   
-}
+  }
+  
