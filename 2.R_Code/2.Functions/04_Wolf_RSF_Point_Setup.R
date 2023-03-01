@@ -3,13 +3,16 @@
 ## Date: 2023-02-21
 
 ## Function purpose: Bring together wolf used and available points for both 
-# packs and for KDE and MCP home ranges
+# packs and for KDE and MCP home ranges with corresponding covariates
 
 #################################### Intro #####################################
 
-# Name: 04_Wolf_RSF_GLM_Models
-# Description:   Bring together the wolf points from previous functions to 
-# create a list of 2 tables, one for KDE and one for MCP home ranges
+# Name: 04_Wolf_RSF_Point_Setup
+# Description:   Extract covariates for all points in the data set and all 
+# available points then bring together all the points create a list of 2 tables. 
+# If by.group = F then there will be one table for KDE and one for MCP home 
+# ranges, if by.group = T then there will be a table for each group by KDE and 
+# by MCP home ranges
 
 ################################## Creation ####################################
 
@@ -18,10 +21,12 @@
 
 ################################# Arguments ####################################
 
-# pts_df_lst
-#       List of dataframes that contain the points and covariate information for 
-#       used and available points for KDE and MCP home ranges as created by 
-#       previous functions
+# pts
+#       Spatial layers of points that have been used by individuals as well as 
+#       available points for each group and home range type
+
+# rast
+#       Stacked raster of all the covariates that will be used
 
 # by.group
 #       A logical operator for whether the data and models should be separated by 
@@ -30,15 +35,22 @@
 
 ################################# Output #######################################
 
-# mod_lst
-#       A list of two model lists (one for KDE home ranges and one for MCP home 
-#       range); all models are univariate and cover all covariates provided
+# pt_sets
+#       A list of tables containing used and available points for each home range 
+#       type and, if by.group = T, for each group
 
 ################################################################################
 ## Function
 
-glm_mods <- function(pts_df_lst,
+pt_setup <- function(pts,
+                     rast,
                      by.group = FALSE){
+  
+  # Extract raster values for all points
+  pts_df_lst <- lapply(pts, 
+                       function(y) terra::extract(cov_rasters, 
+                                                  st_as_sf(y),
+                                                  xy = TRUE))
   
   # Based on the length of the points data.frame list, determine the number and 
   # names of the groups in the data (i.e. packs or herds). There are 3 types of 
@@ -119,34 +131,7 @@ glm_mods <- function(pts_df_lst,
     
   } else {stop("by.group must be either TRUE or FALSE")}
   
-  # Start with an empty list for KDE and MCP to populate with models
-  mod_lst <- list()
-  mod_counter <- 1
-  
-  for (i in 1:length(pt_sets)){
-    
-    data <- pt_sets[[i]]
-    data_name <- names(pt_sets)[[i]]
-    cov_lst <- names(data)[2:(length(names(data))-5)]
-    
-    # Create uni-variate models 
-    for(j in 1:length(cov_lst)){
-      
-      cov_name <- cov_lst[[j]]
-      model <- glm(reformulate(cov_name, "used"), 
-                   data = data, 
-                   family = binomial(logit))
-      mod_lst[[mod_counter]] <- model
-      names(mod_lst)[[mod_counter]] <- gsub(" |\\.|\\$", "_", data_name) %>% 
-        paste0("~", cov_name) %>% 
-        tolower()
-      
-      mod_counter <- mod_counter + 1
-      
-    }
-  }
-  
-  return(mod_lst)
+  return(pt_sets)
   
   }
   
